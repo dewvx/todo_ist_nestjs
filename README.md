@@ -1,5 +1,11 @@
 # Todo List API — NestJS
 
+🔗 **Live Demo (Swagger UI):** https://todo-ist-nestjs.onrender.com/api/docs
+
+> ⚠️ **หมายเหตุ (Render Free Tier)**
+> - **Cold start** — ถ้าไม่มีใครเรียกใช้สักพัก (~15 นาที) request แรกจะช้า (~30–60 วิ) รอจนโหลดเสร็จแล้วลองใหม่ได้ปกติ
+> - **In-memory storage** — instance restart/sleep แล้วข้อมูล Todo จะถูกล้างทั้งหมด (พฤติกรรมปกติของ free tier + in-memory storage)
+
 Todo List REST Application พัฒนาด้วย [NestJS](https://docs.nestjs.com) ครอบคลุมฟังก์ชันหลัก: เพิ่ม / แก้ไข / ลบ / แสดงรายการ / เปลี่ยนสถานะ / ค้นหาและกรอง / Data Validation
 
 ## ฟีเจอร์
@@ -39,16 +45,105 @@ npm run start:prod
 
 เซิร์ฟเวอร์เริ่มที่ **http://localhost:3000** (เปลี่ยนพอร์ตได้ผ่าน environment variable `PORT`)
 
-## Swagger UI
+---
 
-เปิด browser ไปที่:
+## วิธีทดสอบ API ด้วย Swagger UI (ทีละขั้นตอน)
+
+Swagger UI คือหน้าเว็บที่ให้เราทดสอบ API ได้โดยไม่ต้องพิมพ์คำสั่ง curl หรือติดตั้ง Postman เลย
+
+### ขั้นตอนที่ 1: เลือกวิธีเปิด Swagger UI
+
+**วิธี A: Production (ง่ายสุด)** — เปิด browser ไปที่ลิงก์ Live Demo ได้เลย ไม่ต้องติดตั้งหรือรันอะไร:
+
+```
+https://todo-ist-nestjs.onrender.com/api/docs
+```
+
+> 💡 ถ้าโหลดนานผิดปกติ = cold start ของ Render free tier (ดูคำเตือนด้านบน) — รอแล้ว refresh
+
+**วิธี B: Local** — รันเซิร์ฟเวอร์ในเครื่องก่อน:
+
+```bash
+npm run start:dev
+```
+
+รอจนเห็นข้อความ `Todo API is running on http://localhost:3000` แล้วเปิด browser ไปที่:
 
 ```
 http://localhost:3000/api/docs
 ```
 
-- กด endpoint → **Try it out** → กรอก body/params → **Execute** เพื่อทดสอบได้ทันที
-- ดู OpenAPI spec (JSON) ได้ที่ `/api/docs-json`
+จะเห็นหน้าเอกสาร API ภาษาไทย แบ่งเป็นกลุ่ม `todos` ตาม endpoint ต่างๆ
+
+> 💡 ดู OpenAPI spec แบบ JSON ได้ที่ `/api/docs-json` เช่น `https://todo-ist-nestjs.onrender.com/api/docs-json` (ใช้ import เข้า Postman/Insomnia ได้)
+
+### ขั้นตอนที่ 2: ทดสอบแต่ละ Endpoint
+
+สำหรับทุก endpoint ใช้แนวทางเดียวกัน:
+
+1. **คลิกที่แถบ endpoint** เพื่อขยายดูรายละเอียด
+2. กดปุ่ม **Try it out** (มุมขวาบน) — ปุ่มจะเปลี่ยนเป็น Cancel
+3. กรอกข้อมูล:
+   - ถ้ามี `Request body` → แก้ไข JSON ในช่อง textarea (มี example ให้ล่วงหน้าแล้ว)
+   - ถ้ามี path parameter เช่น `id` → กรอกในช่อง text ทางขวา
+   - ถ้ามี query parameters เช่น `search`, `status` → กด **Add string item** แล้วกรอกค่า
+4. กด **Execute**
+5. ดูผลลัพธ์ในส่วน **Server response** — Code = HTTP status, Response body = ข้อมูลที่ได้
+
+### ตัวอย่าง: ทดสอบเพิ่ม Todo (`POST /todos`)
+
+1. ขยาย `POST /todos` → กด **Try it out**
+2. แก้ Request body เป็น:
+
+```json
+{
+  "title": "ซื้อของเข้าบ้าน",
+  "description": "นม ไข่ ขนมปัง",
+  "status": "PENDING"
+}
+```
+
+3. กด **Execute** → ควรได้ response code `201` พร้อมข้อมูล Todo ที่สร้าง (ระบบ generate `id` เป็น UUID ให้เอง)
+4. **คัดลอกค่า `id` จาก response เก็บไว้** — ใช้สำหรับทดสอบ GET/PATCH/DELETE ต่อไป
+
+### ตัวอย่าง: ทดสอบ Endpoint ที่เหลือ
+
+| ลำดับ | Endpoint | วิธีกรอก | Response ที่คาดหวัง |
+|---|---|---|---|
+| 1 | `GET /todos` | ไม่ต้องกรอกอะไร กด Execute ได้เลย | `200` + รายการทั้งหมด |
+| 2 | `GET /todos/{id}` | วาง id จากขั้นตอน POST | `200` + Todo รายการเดียว |
+| 3 | `PATCH /todos/{id}` | วาง id + body เช่น `{"title": "ฉบับแก้ไข"}` | `200` + Todo ที่แก้แล้ว |
+| 4 | `PATCH /todos/{id}/status` | วาง id + body เช่น `{"status": "DONE"}` | `200` + Todo สถานะใหม่ |
+| 5 | `GET /todos?search=...&status=...` | เพิ่ม query param เช่น `search=ของ`, `status=DONE` | `200` + รายการที่กรองแล้ว |
+| 6 | `DELETE /todos/{id}` | วาง id | `204` (ไม่มี response body = สำเร็จ) |
+
+### ตัวอย่าง: ทดสอบ Data Validation
+
+ลองส่งข้อมูลผิดๆ เพื่อดูว่า validation ทำงาน:
+
+- `POST /todos` โดยตั้ง title สั้นกว่า 3 ตัวอักษร เช่น `"ab"` → ได้ `400` พร้อม message
+- `POST /todos` โดยเพิ่ม field แปลกปลอม เช่น `"hacker": true` → ได้ `400` (`property hacker should not exist`)
+- `PATCH /todos/{id}/status` ด้วย status นอก enum เช่น `"FINISHED"` → ได้ `400`
+- กรอก id ที่ไม่ใช่ UUID หรือไม่มีในระบบ → ได้ `404`
+
+### Tips
+
+- กด **Schema** ใต้ Request body เพื่อดูว่า field ไหน required, มีกฎอะไรบ้าง
+- Response `404 Not Found` = ไม่พบ Todo ตาม id นั้น (ลอง `GET /todos` เพื่อดู id ล่าสุด)
+- ข้อมูลเก็บแบบ in-memory — รีสตาร์ทเซิร์ฟเวอร์ (หรือ Render instance restart/sleep) ข้อมูลจะถูกล้าง
+
+---
+
+## Deployment
+
+Deploy บน [Render](https://render.com):
+
+- **URL:** https://todo-ist-nestjs.onrender.com
+- **Swagger UI (production):** https://todo-ist-nestjs.onrender.com/api/docs
+- เชื่อมต่อกับ GitHub repo — push branch main จะ auto-deploy ให้อัตโนมัติ
+- Free tier: instance จะ sleep เมื่อไม่มี traffic ~15 นาที (request แรกหลัง sleep จะช้า)
+
+---
 
 ## API Endpoints
 
@@ -142,3 +237,9 @@ src/
 Request → Controller (route) → DTO (ValidationPipe validate+transform)
         → Service (business logic) → Response JSON
 ```
+
+---
+
+## ผู้พัฒนา
+
+GitHub**dewvx** — dd221552@gmail.com
